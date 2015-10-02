@@ -36,10 +36,18 @@ class Board
       x.each do |y|
         if y.status == :hidden
           print "* "
-        elsif y.status == :revealed
-          print "_ "
         elsif y.status == :flagged
           print "F "
+        elsif y.status == :revealed
+
+          if y.is_bomb
+            print "X "
+          elsif y.neighbor_bomb_count == 0
+            print "_ "
+          else
+            print "#{y.neighbor_bomb_count} "
+          end
+
         end
       end
     end
@@ -54,13 +62,24 @@ class Board
     true
   end
 
-  def update(pos)
-    adjacent_positions = self[pos].neighbors
-    p adjacent_positions
-    adjacent_positions = adjacent_positions.
+  def game_over?
+    @grid.each do |row|
+      row.each do |tile|
+        return true if (tile.is_bomb && tile.status == :revealed)
+      end
     end
-    adjacent_positions
+    false
   end
+
+  # def update(pos)
+  #
+  #   self[pos].neighbors.each do |tile|
+  #     if tile.neighbor_bomb_count == 0
+  #       tile.reveal
+  #       update(tile)
+  #     end
+  #   end
+  # end
 
   private
   def place_bombs
@@ -111,7 +130,12 @@ class Tile
   end
 
   def neighbor_bomb_count
+    count = 0
+    self.neighbors.each do |tile|
+      count += 1 if tile.is_bomb
+    end
 
+    count
   end
 
 end
@@ -170,4 +194,5 @@ end
 
 
 # a = Board.new
+# p a[[0,0]].neighbors.each {|n| print n.class}
 # a.render
