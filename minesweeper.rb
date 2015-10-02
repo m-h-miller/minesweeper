@@ -1,13 +1,13 @@
 require 'byebug'
+
 BOMB_COUNT = 10
 SIDE_SIZE = 9
 
 class Board
-
   attr_reader :bomb_coords, :grid
 
-
   def initialize
+    #debugger
     @grid = Array.new(SIDE_SIZE) { Array.new(SIDE_SIZE) }
     populate
     @bomb_coords = []
@@ -71,15 +71,35 @@ class Board
     false
   end
 
-  # def update(pos)
-  #
-  #   self[pos].neighbors.each do |tile|
-  #     if tile.neighbor_bomb_count == 0
-  #       tile.reveal
-  #       update(tile)
-  #     end
-  #   end
-  # end
+  def update(pos, flag = false)
+
+    if flag
+      if self[pos].status == :flagged
+        self[pos].status == :hidden
+      else
+        self[pos].status = :flagged
+      end
+      return
+    end
+
+    neighbors = self[pos].neighbors
+
+    # p self[pos].status
+    self[pos].status = :revealed
+    # p self[pos].status
+    return if self[pos].neighbor_bomb_count > 0
+    return if neighbors.all? do |n|
+      # n.neighbor_bomb_count > 0 ||
+      n.status == :revealed ||
+      n.is_bomb
+    end
+
+    neighbors.each do |tile|
+      next if tile.status == :revealed || tile.is_bomb
+      update(tile.pos)
+    end
+
+  end
 
   private
   def place_bombs
@@ -95,6 +115,7 @@ class Board
   end
 end
 
+###
 
 class Tile
   attr_accessor :status, :is_bomb, :neighbors, :pos, :board
@@ -125,7 +146,7 @@ class Tile
       (pos[0] < 0 || pos[0] >= SIDE_SIZE) ||
       (pos[1] < 0 || pos[1] >= SIDE_SIZE)
     end
-    result.map { |pos| Tile.new(pos, @board)}
+    result.map { |pos| @board[pos]}
 
   end
 
@@ -140,8 +161,10 @@ class Tile
 
 end
 
+###
 
 class Game
+  attr_accessor :board
 
   def initialize(player)
     @board = Board.new
@@ -149,22 +172,24 @@ class Game
   end
 
   def play
-    until @board.won?
+    puts "Welcome to Minesweeper"
+
+
+    until @board.won? || @board.game_over?
+      @board.render
       pos = @player.choose_tile
-      if !@board[pos].is_bomb && @board[pos].status == :hidden
-        @board[pos].reveal
-      elsif @board[pos].status == :revealed
-        @player.choose_tile
-      else
-        return "You lose \n\nTo play again enter...."
-      end
+      # until board.valid_move?(pos)
+      #   puts "That position is invalid, enter a new one"
+      #   pos = @player.choose_tile
+      # end
       @board.update(pos)
     end
     @board.render
-    puts "You win the GAME!!!!!"
+    @board.won? ? (puts "You win the GAME!!!!!") : (puts "YOU LOST!!!!")
   end
 end
 
+###
 
 class Player
 
@@ -193,6 +218,11 @@ class Player
 end
 
 
-# a = Board.new
+a = Board.new
 # p a[[0,0]].neighbors.each {|n| print n.class}
 # a.render
+a.update([0,0])
+a.render
+# a.render
+# b = Game.new(Player.new)
+# b.play
