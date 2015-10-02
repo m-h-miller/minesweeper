@@ -1,12 +1,14 @@
 require 'byebug'
+BOMB_COUNT = 10
+SIDE_SIZE = 9
 
 class Board
 
   attr_reader :bomb_coords, :grid
-  BOMB_COUNT = 10
+
 
   def initialize
-    @grid = Array.new(9) { Array.new(9) }
+    @grid = Array.new(SIDE_SIZE) { Array.new(SIDE_SIZE) }
     populate
     @bomb_coords = []
     place_bombs
@@ -23,11 +25,42 @@ class Board
   def populate
     @grid.each_with_index do |row, xindex|
       row.each_with_index do |tile, yindex|
-        self[[xindex, yindex]] = Tile.new([xindex, yindex])
+        self[[xindex, yindex]] = Tile.new([xindex, yindex], self)
       end
     end
   end
 
+  def render
+    @grid.each do |x|
+      puts "\n"
+      x.each do |y|
+        if y.status == :hidden
+          print "* "
+        elsif y.status == :revealed
+          print "_ "
+        elsif y.status == :flagged
+          print "F "
+        end
+      end
+    end
+  end
+
+  def won?
+    @grid.each do |row|
+      row.each do |tile|
+        return false if (!tile.is_bomb && tile.status == :hidden)
+      end
+    end
+    true
+  end
+
+  def update(pos)
+    adjacent_positions = self[pos].neighbors
+    p adjacent_positions
+    adjacent_positions = adjacent_positions.
+    end
+    adjacent_positions
+  end
 
   private
   def place_bombs
@@ -45,16 +78,13 @@ end
 
 
 class Tile
-  attr_accessor :status, :is_bomb, :neighbors, :pos
+  attr_accessor :status, :is_bomb, :neighbors, :pos, :board
 
-  def initialize(pos)
+  def initialize(pos, board)
     @status = :hidden
     @is_bomb = false
     @pos = pos
-    # @neighbors = @grid.each do |row|
-    #   row.each do |column|
-    #   end
-    # end
+    @board = board
   end
 
   def reveal
@@ -62,6 +92,21 @@ class Tile
   end
 
   def neighbors
+    x, y = pos[0], pos[1]
+    result = [
+      [x+1, y+1],
+      [x+1, y-1],
+      [x+1, y],
+      [x-1, y+1],
+      [x-1, y-1],
+      [x-1, y],
+      [x, y+1],
+      [x, y-1]
+    ].reject do |pos|
+      (pos[0] < 0 || pos[0] >= SIDE_SIZE) ||
+      (pos[1] < 0 || pos[1] >= SIDE_SIZE)
+    end
+    result.map { |pos| Tile.new(pos, @board)}
 
   end
 
@@ -70,3 +115,59 @@ class Tile
   end
 
 end
+
+
+class Game
+
+  def initialize(player)
+    @board = Board.new
+    @player = player
+  end
+
+  def play
+    until @board.won?
+      pos = @player.choose_tile
+      if !@board[pos].is_bomb && @board[pos].status == :hidden
+        @board[pos].reveal
+      elsif @board[pos].status == :revealed
+        @player.choose_tile
+      else
+        return "You lose \n\nTo play again enter...."
+      end
+      @board.update(pos)
+    end
+    @board.render
+    puts "You win the GAME!!!!!"
+  end
+end
+
+
+class Player
+
+  def initialize(name = "Player")
+    @name = name
+  end
+
+  def choose_tile
+    puts "Enter an x coordinate:"
+    x = gets.chomp.to_i
+    until x >= 0 || x <= 8
+      puts "Invalid coordinate, try again:"
+      x = gets.chomp.to_i
+    end
+
+    puts "Same with y:"
+    y = gets.chomp.to_i
+    until y >= 0 || y <= 8
+      puts "Invalid coordinate, try again:"
+      y = gets.chomp.to_i
+    end
+
+    [x, y]
+  end
+
+end
+
+
+# a = Board.new
+# a.render
